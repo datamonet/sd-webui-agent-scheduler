@@ -1,3 +1,4 @@
+import os
 import sys
 import abc
 import time
@@ -8,6 +9,18 @@ from typing import Callable, List
 
 import gradio as gr
 from gradio.blocks import Block, BlockContext
+from filelock import FileLock
+
+from modules import scripts
+
+from .db.base import file_prefix
+
+
+# filelock
+lock_timeout = os.getenv("TASK_SCHEDULER_LOCK_TIMEOUT", 5)
+lock_file = os.path.join(scripts.basedir(), f"{file_prefix}task_queue.lock")
+lock = FileLock(lock_file, timeout=lock_timeout)
+
 
 if logging.getLogger().hasHandlers():
     log = logging.getLogger("sd")

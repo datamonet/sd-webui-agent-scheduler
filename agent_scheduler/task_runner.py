@@ -22,8 +22,10 @@ from modules.api.models import (
 )
 
 from .db import TaskStatus, Task, task_manager
+from .db.base import running_timeout
 from .helpers import (
     log,
+    lock,
     detect_control_net,
     get_component_by_elem_id,
     get_dict_attribute,
@@ -399,9 +401,14 @@ class TaskRunner:
                 time.sleep(2)
                 continue
 
-            task = get_next_task()
-            if not task:
-                break
+            # lock and get peddding task and set task is running
+            with lock:
+                task = get_next_task()
+                if not task:
+                    break
+                task.status = TaskStatus.RUNNING
+                task_manager.update_task(task)
+                log.info(f"\n[AgentScheduler] Task acquire lock: {task.id}")
 
     def execute_pending_tasks_threading(self):
         if self.paused:
@@ -412,14 +419,14 @@ class TaskRunner:
             log.info("[AgentScheduler] Runner already started")
             return
 
-        pending_task = self.__get_pending_task()
+        pending_task = self.__get_queue_task()
         if pending_task:
             # Start the infinite loop in a separate thread
             self.__current_thread = threading.Thread(
                 target=self.execute_task,
                 args=(
                     pending_task,
-                    self.__get_pending_task,
+                    self.__get_queue_task,
                 ),
             )
             self.__current_thread.daemon = True
@@ -491,7 +498,25 @@ class TaskRunner:
             progress.finish_task(task_id)
 
         return res
+    
+    def __get_queue_task(self):
+        timeout_at = datetime.now() - timedelta(seconds=int(running_timeout))
+        print(timeout_at)
+        # long running task need to retry
+        __total_running_timeout_tasks = task_manager.count_tasks(
+            status=TaskStatus.RUNNING, 
+            lt_update_at=timeout_at
+        )
+        if __total_running_timeout_tasks > 0:
+            log.info(
+                f"[AgentScheduler] Total running timeout tasks: {__total_running_timeout_tasks}"
+            )
+            running_tasks = task_manager.get_tasks(status=TaskStatus.RUNNING, lt_update_at=timeout_at, limit=1)
+            if len(running_tasks) > 0:
+                return running_tasks[0]
 
+        return self.__get_pending_task()
+    
     def __get_pending_task(self):
         if self.dispose:
             return None

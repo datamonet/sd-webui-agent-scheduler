@@ -10,7 +10,10 @@ from modules import scripts
 Base = declarative_base()
 metadata: MetaData = Base.metadata
 
-db_file = os.path.join(scripts.basedir(), "task_scheduler.sqlite3")
+file_prefix = os.getenv("TASK_SCHEDULER_FILE_PREFIX", "")
+running_timeout = os.getenv("TASK_SCHEDULER_RUNNING_TIMEOUT", 300)
+print(f"file prefix: {file_prefix} running timeout: {running_timeout}")
+db_file = os.path.join(scripts.basedir(), f"{file_prefix}task_scheduler.sqlite3")
 
 
 class BaseTableManager:

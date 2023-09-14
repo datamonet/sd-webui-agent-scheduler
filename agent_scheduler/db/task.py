@@ -162,6 +162,10 @@ class TaskManager(BaseTableManager):
         api_task_id: str = None,
         limit: int = None,
         offset: int = None,
+        lt_create_at: datetime = None,
+        gt_create_at: datetime = None,
+        lt_update_at: datetime = None,
+        gt_update_at: datetime = None,
         order: str = "asc",
     ) -> List[TaskTable]:
         session = Session(self.engine)
@@ -183,6 +187,18 @@ class TaskManager(BaseTableManager):
                 query = query.filter(TaskTable.bookmarked == bookmarked)
             else:
                 query = query.order_by(TaskTable.bookmarked.asc())
+            
+            if lt_create_at is not None:
+                query = query.filter(TaskTable.created_at <= lt_create_at)
+            
+            if gt_create_at is not None:
+                query = query.filter(TaskTable.created_at >= gt_create_at)
+            
+            if lt_update_at is not None:
+                query = query.filter(TaskTable.updated_at <= lt_update_at)
+            
+            if gt_update_at is not None:
+                query = query.filter(TaskTable.updated_at >= gt_update_at)
 
             query = query.order_by(
                 TaskTable.priority.asc()
@@ -208,6 +224,10 @@ class TaskManager(BaseTableManager):
         self,
         type: str = None,
         status: Union[str, List[str]] = None,
+        lt_create_at: datetime = None,
+        gt_create_at: datetime = None,
+        lt_update_at: datetime = None,
+        gt_update_at: datetime = None,
         api_task_id: str = None,
     ) -> int:
         session = Session(self.engine)
@@ -221,6 +241,18 @@ class TaskManager(BaseTableManager):
                     query = query.filter(TaskTable.status.in_(status))
                 else:
                     query = query.filter(TaskTable.status == status)
+
+            if lt_create_at is not None:
+                query = query.filter(TaskTable.created_at <= lt_create_at)
+            
+            if gt_create_at is not None:
+                query = query.filter(TaskTable.created_at >= gt_create_at)
+            
+            if lt_update_at is not None:
+                query = query.filter(TaskTable.updated_at <= lt_update_at)
+            
+            if gt_update_at is not None:
+                query = query.filter(TaskTable.updated_at >= gt_update_at)
 
             if api_task_id:
                 query = query.filter(TaskTable.api_task_id == api_task_id)
