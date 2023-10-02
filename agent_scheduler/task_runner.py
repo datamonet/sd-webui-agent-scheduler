@@ -353,7 +353,8 @@ class TaskRunner:
                         log.error(
                             f"[AgentScheduler] Task {task_id} failed: CUDA OOM. Queue will be paused."
                         )
-                        shared.opts.queue_paused = True
+                        # OOM not paused, continue exec next tasks
+                        # shared.opts.queue_paused = True
                     else:
                         log.error(f"[AgentScheduler] Task {task_id} failed: {res}")
                         log.debug(traceback.format_exc())
