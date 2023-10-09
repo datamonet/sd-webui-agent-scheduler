@@ -406,7 +406,8 @@ class TaskRunner:
             with lock:
                 task = get_next_task()
                 if not task:
-                    break
+                    time.sleep(2)
+                    continue
                 task.status = TaskStatus.RUNNING
                 task_manager.update_task(task)
                 log.info(f"\n[AgentScheduler] Task acquire lock: {task.id}")
