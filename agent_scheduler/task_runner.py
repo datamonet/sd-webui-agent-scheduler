@@ -323,7 +323,7 @@ class TaskRunner:
             if self.dispose:
                 break
 
-            if progress.current_task is None:
+            if progress.current_task is None and task is not None:
                 task_id = task.id
                 is_img2img = task.type == "img2img"
                 log.info(f"[AgentScheduler] Executing task {task_id}")
@@ -420,17 +420,18 @@ class TaskRunner:
             return
 
         pending_task = self.__get_queue_task()
-        if pending_task:
-            # Start the infinite loop in a separate thread
-            self.__current_thread = threading.Thread(
-                target=self.execute_task,
-                args=(
-                    pending_task,
-                    self.__get_queue_task,
-                ),
-            )
-            self.__current_thread.daemon = True
-            self.__current_thread.start()
+        # if pending_task:
+
+        # Start the infinite loop in a separate thread
+        self.__current_thread = threading.Thread(
+            target=self.execute_task,
+            args=(
+                pending_task,
+                self.__get_queue_task,
+            ),
+        )
+        self.__current_thread.daemon = True
+        self.__current_thread.start()
 
     def __execute_task(self, task_id: str, is_img2img: bool, task_args: ParsedTaskArgs):
         if task_args.is_ui:
