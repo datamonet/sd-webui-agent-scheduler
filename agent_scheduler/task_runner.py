@@ -400,13 +400,11 @@ class TaskRunner:
                 self.__saved_images_path = []
             else:
                 time.sleep(2)
-                continue
 
             # lock and get peddding task and set task is running
             with lock:
                 task = get_next_task()
                 if not task:
-                    time.sleep(2)
                     continue
                 task.status = TaskStatus.RUNNING
                 task_manager.update_task(task)
