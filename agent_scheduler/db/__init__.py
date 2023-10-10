@@ -1,7 +1,8 @@
 from pathlib import Path
 from sqlalchemy import create_engine, inspect, text, String, Text
+from sqlalchemy_utils import create_database, database_exists
 
-from .base import Base, metadata, db_file
+from .base import Base, metadata, database_uri
 from .app_state import AppStateKey, AppState, AppStateManager
 from .task import TaskStatus, Task, TaskManager
 
@@ -12,7 +13,9 @@ task_manager = TaskManager()
 
 
 def init():
-    engine = create_engine(f"sqlite:///{db_file}")
+    engine = create_engine(database_uri)
+    if not database_exists(engine.url):
+        create_database(engine.url)
 
     metadata.create_all(engine)
 
@@ -25,7 +28,6 @@ def init():
     inspector = inspect(engine)
     with engine.connect() as conn:
         task_columns = inspector.get_columns("task")
-        conn.execute(text("PRAGMA journal_mode = WAL"))
         # add result column
         if not any(col["name"] == "result" for col in task_columns):
             conn.execute(text("ALTER TABLE task ADD COLUMN result TEXT"))
@@ -78,7 +80,7 @@ __all__ = [
     "init",
     "Base",
     "metadata",
-    "db_file",
+    "database_uri",
     "AppStateKey",
     "AppState",
     "TaskStatus",

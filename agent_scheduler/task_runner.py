@@ -400,7 +400,7 @@ class TaskRunner:
 
                         self.__saved_images_path = []
                     else:
-                        time.sleep(4)
+                        time.sleep(2)
 
                     # lock and get peddding task and set task is running
                     with lock:

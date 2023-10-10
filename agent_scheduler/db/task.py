@@ -109,13 +109,13 @@ class TaskTable(Base):
     created_at = Column(
         DateTime,
         nullable=False,
-        server_default=text("(datetime('now'))"),
+        server_default=text('CURRENT_TIMESTAMP'),
     )
     updated_at = Column(
         DateTime,
         nullable=False,
-        server_default=text("(datetime('now'))"),
-        onupdate=text("(datetime('now'))"),
+        server_default=text("CURRENT_TIMESTAMP"),
+        onupdate=text('CURRENT_TIMESTAMP'),
     )
 
     def __repr__(self):
