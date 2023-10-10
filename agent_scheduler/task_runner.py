@@ -402,8 +402,8 @@ class TaskRunner:
                     else:
                         time.sleep(2)
 
-                except Exception as e:
-                    log.error(f"[AgentScheduler] Task exception: {e}")
+                except Exception as res:
+                    log.error(f"[AgentScheduler] Task exception: {res}")
                     log.error(traceback.format_exc())
 
                     task.status = TaskStatus.FAILED
