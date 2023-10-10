@@ -400,7 +400,7 @@ class TaskRunner:
 
                         self.__saved_images_path = []
                     else:
-                        time.sleep(2)
+                        time.sleep(4)
 
                     # lock and get peddding task and set task is running
                     with lock:
@@ -506,7 +506,6 @@ class TaskRunner:
     
     def __get_queue_task(self):
         timeout_at = datetime.now() - timedelta(seconds=int(running_timeout))
-        print(timeout_at)
         # long running task need to retry
         __total_running_timeout_tasks = task_manager.count_tasks(
             status=TaskStatus.RUNNING, 
