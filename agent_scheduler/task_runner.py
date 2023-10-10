@@ -319,96 +319,100 @@ class TaskRunner:
         return task
 
     def execute_task(self, task: Task, get_next_task: Callable[[], Task]):
-        while True:
-            if self.dispose:
-                break
+            while True:
+                try:
+                    if self.dispose:
+                        break
 
-            if progress.current_task is None and task is not None:
-                task_id = task.id
-                is_img2img = task.type == "img2img"
-                log.info(f"[AgentScheduler] Executing task {task_id}")
+                    if progress.current_task is None and task is not None:
+                        task_id = task.id
+                        is_img2img = task.type == "img2img"
+                        log.info(f"[AgentScheduler] Executing task {task_id}")
 
-                task_args = self.parse_task_args(task)
-                task_meta = {
-                    "is_img2img": is_img2img,
-                    "is_ui": task_args.is_ui,
-                    "task": task,
-                }
-
-                self.interrupted = None
-                self.__saved_images_path = []
-                self.__run_callbacks("task_started", task_id, **task_meta)
-
-                # enable image saving
-                samples_save = shared.opts.samples_save
-                shared.opts.samples_save = True
-
-                res = self.__execute_task(task_id, is_img2img, task_args)
-
-                # disable image saving
-                shared.opts.samples_save = samples_save
-
-                if not res or isinstance(res, Exception):
-                    if isinstance(res, OutOfMemoryError):
-                        log.error(
-                            f"[AgentScheduler] Task {task_id} failed: CUDA OOM. Queue will be paused."
-                        )
-                        # OOM not paused, continue exec next tasks
-                        # shared.opts.queue_paused = True
-                    else:
-                        log.error(f"[AgentScheduler] Task {task_id} failed: {res}")
-                        log.debug(traceback.format_exc())
-
-                    task.status = TaskStatus.FAILED
-                    task.result = str(res) if res else None
-                    task_manager.update_task(task)
-                    self.__run_callbacks(
-                        "task_finished", task_id, status=TaskStatus.FAILED, **task_meta
-                    )
-                else:
-                    is_interrupted = self.interrupted == task_id
-                    if is_interrupted:
-                        log.info(f"\n[AgentScheduler] Task {task.id} interrupted")
-                        task.status = TaskStatus.INTERRUPTED
-                        task_manager.update_task(task)
-                        self.__run_callbacks(
-                            "task_finished",
-                            task_id,
-                            status=TaskStatus.INTERRUPTED,
-                            **task_meta,
-                        )
-                    else:
-                        result = {
-                            "images": [],
-                            "infotexts": [],
+                        task_args = self.parse_task_args(task)
+                        task_meta = {
+                            "is_img2img": is_img2img,
+                            "is_ui": task_args.is_ui,
+                            "task": task,
                         }
-                        for filename, pnginfo in self.__saved_images_path:
-                            result["images"].append(filename)
-                            result["infotexts"].append(pnginfo)
 
-                        task.status = TaskStatus.DONE
-                        task.result = json.dumps(result)
+                        self.interrupted = None
+                        self.__saved_images_path = []
+                        self.__run_callbacks("task_started", task_id, **task_meta)
+
+                        # enable image saving
+                        samples_save = shared.opts.samples_save
+                        shared.opts.samples_save = True
+
+                        res = self.__execute_task(task_id, is_img2img, task_args)
+
+                        # disable image saving
+                        shared.opts.samples_save = samples_save
+
+                        if not res or isinstance(res, Exception):
+                            if isinstance(res, OutOfMemoryError):
+                                log.error(
+                                    f"[AgentScheduler] Task {task_id} failed: CUDA OOM. Queue will be paused."
+                                )
+                                # OOM not paused, continue exec next tasks
+                                # shared.opts.queue_paused = True
+                            else:
+                                log.error(f"[AgentScheduler] Task {task_id} failed: {res}")
+                                log.debug(traceback.format_exc())
+
+                            task.status = TaskStatus.FAILED
+                            task.result = str(res) if res else None
+                            task_manager.update_task(task)
+                            self.__run_callbacks(
+                                "task_finished", task_id, status=TaskStatus.FAILED, **task_meta
+                            )
+                        else:
+                            is_interrupted = self.interrupted == task_id
+                            if is_interrupted:
+                                log.info(f"\n[AgentScheduler] Task {task.id} interrupted")
+                                task.status = TaskStatus.INTERRUPTED
+                                task_manager.update_task(task)
+                                self.__run_callbacks(
+                                    "task_finished",
+                                    task_id,
+                                    status=TaskStatus.INTERRUPTED,
+                                    **task_meta,
+                                )
+                            else:
+                                result = {
+                                    "images": [],
+                                    "infotexts": [],
+                                }
+                                for filename, pnginfo in self.__saved_images_path:
+                                    result["images"].append(filename)
+                                    result["infotexts"].append(pnginfo)
+
+                                task.status = TaskStatus.DONE
+                                task.result = json.dumps(result)
+                                task_manager.update_task(task)
+                                self.__run_callbacks(
+                                    "task_finished",
+                                    task_id,
+                                    status=TaskStatus.DONE,
+                                    result=result,
+                                    **task_meta,
+                                )
+
+                        self.__saved_images_path = []
+                    else:
+                        time.sleep(2)
+
+                    # lock and get peddding task and set task is running
+                    with lock:
+                        task = get_next_task()
+                        if not task:
+                            continue
+                        task.status = TaskStatus.RUNNING
                         task_manager.update_task(task)
-                        self.__run_callbacks(
-                            "task_finished",
-                            task_id,
-                            status=TaskStatus.DONE,
-                            result=result,
-                            **task_meta,
-                        )
-
-                self.__saved_images_path = []
-            else:
-                time.sleep(2)
-
-            # lock and get peddding task and set task is running
-            with lock:
-                task = get_next_task()
-                if not task:
-                    continue
-                task.status = TaskStatus.RUNNING
-                task_manager.update_task(task)
-                log.info(f"\n[AgentScheduler] Task acquire lock: {task.id}")
+                        log.info(f"\n[AgentScheduler] Task acquire lock: {task.id}")
+                except Exception as e:
+                    log.error(f"[AgentScheduler] Task exception: {e}")
+                    log.error(traceback.format_exc())
 
     def execute_pending_tasks_threading(self):
         if self.paused:

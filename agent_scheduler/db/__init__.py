@@ -25,6 +25,7 @@ def init():
     inspector = inspect(engine)
     with engine.connect() as conn:
         task_columns = inspector.get_columns("task")
+        conn.execute("PRAGMA journal_mode = WAL")
         # add result column
         if not any(col["name"] == "result" for col in task_columns):
             conn.execute(text("ALTER TABLE task ADD COLUMN result TEXT"))
