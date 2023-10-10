@@ -410,7 +410,7 @@ class TaskRunner:
                     task.result = str(res) if res else None
                     task_manager.update_task(task)
                     self.__run_callbacks(
-                        "task_finished", task_id, status=TaskStatus.FAILED, **task_meta
+                        "task_finished", task_id, status=TaskStatus.FAILED, task=task
                     )
 
                 # lock and get peddding task and set task is running
