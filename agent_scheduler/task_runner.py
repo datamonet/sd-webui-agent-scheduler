@@ -402,17 +402,25 @@ class TaskRunner:
                     else:
                         time.sleep(2)
 
-                    # lock and get peddding task and set task is running
-                    with lock:
-                        task = get_next_task()
-                        if not task:
-                            continue
-                        task.status = TaskStatus.RUNNING
-                        task_manager.update_task(task)
-                        log.info(f"\n[AgentScheduler] Task acquire lock: {task.id}")
                 except Exception as e:
                     log.error(f"[AgentScheduler] Task exception: {e}")
                     log.error(traceback.format_exc())
+
+                    task.status = TaskStatus.FAILED
+                    task.result = str(res) if res else None
+                    task_manager.update_task(task)
+                    self.__run_callbacks(
+                        "task_finished", task_id, status=TaskStatus.FAILED, **task_meta
+                    )
+
+                # lock and get peddding task and set task is running
+                with lock:
+                    task = get_next_task()
+                    if not task:
+                        continue
+                    task.status = TaskStatus.RUNNING
+                    task_manager.update_task(task)
+                    log.info(f"\n[AgentScheduler] Task acquire lock: {task.id}")
 
     def execute_pending_tasks_threading(self):
         if self.paused:
