@@ -417,12 +417,15 @@ class TaskRunner:
 
                 # lock and get peddding task and set task is running
                 with lock_cls(lock_name, lock_timeout) as _:
+                    st = time.time()
                     task = get_next_task()
+                    log.info(f"get next task cost time: {time.time() - st}")
                     if not task:
                         continue
                     task.status = TaskStatus.RUNNING
                     task_manager.update_task(task)
-                    log.info(f"\n[AgentScheduler] Task acquire lock: {task.id}")
+                    et = time.time()
+                    log.info(f"\n[AgentScheduler] Task acquire lock: {task.id}, cost time: {et - st}")
 
     def execute_pending_tasks_threading(self):
         if self.paused:
