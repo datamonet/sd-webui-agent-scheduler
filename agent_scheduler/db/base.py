@@ -45,7 +45,6 @@ class MySQLLock(BaseTableManager):
         self.lock_name = f"{file_prefix}_{lock_name}"
         self.timeout = timeout
         self.session = Session(self.engine)
-        print(f"using mysql lock!!")
 
     def __enter__(self):
         # Acquire the lock

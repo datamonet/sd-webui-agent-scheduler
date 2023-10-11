@@ -401,7 +401,8 @@ class TaskRunner:
 
                         self.__saved_images_path = []
                     else:
-                        time.sleep(2)
+                        pending_time = 1 + random.random()
+                        time.sleep(pending_time)
 
                 except Exception as res:
                     log.error(f"[AgentScheduler] Task exception: {res}")
