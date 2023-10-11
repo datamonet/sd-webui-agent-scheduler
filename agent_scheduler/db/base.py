@@ -18,7 +18,7 @@ sqlite_db_fp = os.path.join(scripts.basedir(), f'{file_prefix}task_scheduler.sql
 database_uri = os.getenv("TASK_DATABASE") or f"sqlite:///{sqlite_db_fp}"
 is_mysql_db = database_uri.startswith("mysql")
 lock_timeout = os.getenv("TASK_SCHEDULER_LOCK_TIMEOUT", 5)
-lock_file = os.path.join(scripts.basedir(), f"{file_prefix}task_queue.lock")
+lock_name = f"{file_prefix}_queue_lock" if is_mysql_db else os.path.join(scripts.basedir(), f"{file_prefix}task_queue.lock")
 
 
 class BaseTableManager:
@@ -44,12 +44,12 @@ class MySQLLock(BaseTableManager):
 
         self.lock_name = f"{file_prefix}_{lock_name}"
         self.timeout = timeout
+        self.session = Session(self.engine)
         print(f"using mysql lock!!")
 
     def __enter__(self):
         # Acquire the lock
-        session = Session(self.engine)
-        session.execute(text(f"SELECT GET_LOCK('{self.lock_name}', {self.timeout});"))
+        self.session.execute(text(f"SELECT GET_LOCK('{self.lock_name}', {self.timeout});"))
 
     def __exit__(self, exc_type, exc_value, traceback):
         # 释放锁

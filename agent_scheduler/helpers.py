@@ -13,10 +13,10 @@ from filelock import FileLock
 
 from modules import scripts
 
-from .db.base import is_mysql_db, MySQLLock, lock_file, lock_timeout
+from .db.base import is_mysql_db, MySQLLock
 
 
-lock = MySQLLock() if is_mysql_db else FileLock(lock_file, timeout=lock_timeout)
+lock_cls = MySQLLock if is_mysql_db else FileLock
 
 
 if logging.getLogger().hasHandlers():

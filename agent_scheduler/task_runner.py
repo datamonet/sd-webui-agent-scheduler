@@ -23,10 +23,10 @@ from modules.api.models import (
 )
 
 from .db import TaskStatus, Task, task_manager
-from .db.base import running_timeout
+from .db.base import running_timeout, lock_name, lock_timeout
 from .helpers import (
     log,
-    lock,
+    lock_cls,
     detect_control_net,
     get_component_by_elem_id,
     get_dict_attribute,
@@ -415,7 +415,7 @@ class TaskRunner:
                     )
 
                 # lock and get peddding task and set task is running
-                with lock:
+                with lock_cls(lock_name, lock_timeout) as _:
                     task = get_next_task()
                     if not task:
                         continue
