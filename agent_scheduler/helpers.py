@@ -10,16 +10,17 @@ from typing import Callable, List
 import gradio as gr
 from gradio.blocks import Block, BlockContext
 from filelock import FileLock
+from sqlalchemy import create_engine
 
 from modules import scripts
 
-from .db.base import file_prefix
+from .db.base import file_prefix, is_mysql_db, database_uri
 
 
 # filelock
 lock_timeout = os.getenv("TASK_SCHEDULER_LOCK_TIMEOUT", 5)
 lock_file = os.path.join(scripts.basedir(), f"{file_prefix}task_queue.lock")
-lock = FileLock(lock_file, timeout=lock_timeout)
+# lock = FileLock(lock_file, timeout=lock_timeout)
 
 
 if logging.getLogger().hasHandlers():
@@ -59,6 +60,30 @@ else:
 
     log = logger
 
+
+class MySQLLock:
+    def __init__(self, lock_name="task_lock", timeout=lock_timeout):
+        self.lock_name = f"{file_prefix}_{lock_name}"
+        self.timeout = timeout
+        self.engine = create_engine(database_uri)
+        log.info(f"using mysql lock!!!")
+
+    def __enter__(self):
+        # Acquire the lock
+        with self.engine.connect() as conn:
+            result = conn.execute(f"SELECT GET_LOCK('{self.lock_name}', {self.timeout});")
+            if result[0] != 1:
+                raise Exception("Failed to acquire lock")
+            conn.close()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        # Release the lock
+        with self.engine.connect() as conn:
+            conn.execute(f"SELECT RELEASE_LOCK('{self.lock_name}');")
+            conn.close()
+
+
+lock = MySQLLock() if is_mysql_db else FileLock(lock_file, timeout=lock_timeout)
 
 class Singleton(abc.ABCMeta, type):
     """
