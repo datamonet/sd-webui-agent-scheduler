@@ -15,9 +15,14 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.orm import Session
+from sqlalchemy.dialects.mysql import LONGTEXT, LONGBLOB
 
-from .base import BaseTableManager, Base
+from .base import BaseTableManager, Base, is_mysql_db
 from ..models import TaskModel
+
+
+TEXT_TYPE = LONGTEXT if is_mysql_db else Text
+BLOB_TYPE = LONGBLOB if is_mysql_db else LargeBinary
 
 
 class DateTime(TypeDecorator):
@@ -98,8 +103,8 @@ class TaskTable(Base):
     api_task_callback = Column(String(255), nullable=True)
     name = Column(String(255), nullable=True)
     type = Column(String(20), nullable=False)  # txt2img or img2txt
-    params = Column(Text, nullable=False)  # task args
-    script_params = Column(LargeBinary, nullable=False)  # script args
+    params = Column(TEXT_TYPE, nullable=False)  # task args
+    script_params = Column(BLOB_TYPE, nullable=False)  # script args
     priority = Column(Integer, nullable=False)
     status = Column(
         String(20), nullable=False, default="pending"

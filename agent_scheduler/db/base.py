@@ -15,6 +15,7 @@ running_timeout = os.getenv("TASK_SCHEDULER_RUNNING_TIMEOUT", 300)
 print(f"file prefix: {file_prefix} running timeout: {running_timeout}")
 sqlite_db_fp = os.path.join(scripts.basedir(), f'{file_prefix}task_scheduler.sqlite3')
 database_uri = os.getenv("TASK_DATABASE") or f"sqlite:///{sqlite_db_fp}"
+is_mysql_db = database_uri.startswith("mysql")
 
 
 class BaseTableManager:

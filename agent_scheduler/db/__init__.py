@@ -2,14 +2,16 @@ from pathlib import Path
 from sqlalchemy import create_engine, inspect, text, String, Text
 from sqlalchemy_utils import create_database, database_exists
 
-from .base import Base, metadata, database_uri
+from .base import Base, metadata, database_uri, is_mysql_db
 from .app_state import AppStateKey, AppState, AppStateManager
 from .task import TaskStatus, Task, TaskManager
 
-version = "2"
+version = "1"
 
 state_manager = AppStateManager()
 task_manager = TaskManager()
+TEXT_COLUME = "LONGTEXT" if is_mysql_db else "TEXT"
+BLOB_COLUME = "LONGBLOB" if is_mysql_db else "BLOB"
 
 
 def init():
@@ -53,16 +55,16 @@ def init():
             transaction = conn.begin()
             conn.execute(
                 text(
-                    """
+                    f"""
                     CREATE TABLE task_temp (
                         id VARCHAR(64) NOT NULL,
                         type VARCHAR(20) NOT NULL,
-                        params TEXT NOT NULL,
-                        script_params BLOB NOT NULL,
+                        params {TEXT_COLUME} NOT NULL,
+                        script_params {BLOB_COLUME} NOT NULL,
                         priority INTEGER NOT NULL,
                         status VARCHAR(20) NOT NULL,
-                        created_at DATETIME DEFAULT (datetime('now')) NOT NULL,
-                        updated_at DATETIME DEFAULT (datetime('now')) NOT NULL,
+                        created_at DATETIME DEFAULT ("CURRENT_TIMESTAMP") NOT NULL,
+                        updated_at DATETIME DEFAULT ("CURRENT_TIMESTAMP") NOT NULL,
                         result TEXT,
                         PRIMARY KEY (id)
                     )"""
