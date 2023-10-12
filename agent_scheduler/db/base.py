@@ -50,6 +50,9 @@ class MySQLLock(BaseTableManager):
 
     def __init__(self, lock_name="task_lock", timeout=lock_timeout):
         super().__init__()
+        if MySQLLock._scoped_session is None:
+            raise ValueError("Please initialize the session factory first using `initialize_session_factory`.")
+
 
         self.lock_name = f"{file_prefix}_{lock_name}"
         self.timeout = timeout
@@ -59,6 +62,7 @@ class MySQLLock(BaseTableManager):
         self.session = MySQLLock._scoped_session()
         # Acquire the lock
         self.session.execute(text(f"SELECT GET_LOCK('{self.lock_name}', {self.timeout});"))
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         # 释放锁
