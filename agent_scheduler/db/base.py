@@ -3,7 +3,7 @@ import os
 from sqlalchemy import create_engine, text
 from sqlalchemy.schema import MetaData
 from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 from modules import scripts
 
@@ -39,19 +39,35 @@ class BaseTableManager:
 
 
 class MySQLLock(BaseTableManager):
+    _session_factory = None
+    _scoped_session = None
+
+    @classmethod
+    def initialize_session_factory(cls, engine_url):
+        engine = create_engine(engine_url)
+        cls._session_factory = sessionmaker(bind=engine)
+        cls._scoped_session = scoped_session(cls._session_factory)
+
     def __init__(self, lock_name="task_lock", timeout=lock_timeout):
         super().__init__()
 
         self.lock_name = f"{file_prefix}_{lock_name}"
         self.timeout = timeout
-        self.session = Session(self.engine)
+        self.session = None
 
     def __enter__(self):
+        self.session = MySQLLock._scoped_session()
         # Acquire the lock
         self.session.execute(text(f"SELECT GET_LOCK('{self.lock_name}', {self.timeout});"))
 
     def __exit__(self, exc_type, exc_value, traceback):
         # 释放锁
         self.session.execute(text(f"SELECT RELEASE_LOCK('{self.lock_name}');"))
-        # 关闭 session
+        # Commit changes and close session
+        self.session.commit()
         self.session.close()
+
+
+if is_mysql_db:
+    # Initialization
+    MySQLLock.initialize_session_factory(database_uri)
